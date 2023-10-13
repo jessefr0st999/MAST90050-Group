@@ -172,7 +172,8 @@ class Schedule():
 
         # we may have deliberately delayed an elective job to improve break in moments
         if not job_info['emergency']:
-            running_time += self.delays[job]
+            if running_time < ROOM_OPEN_TIME + self.delays[job]:
+                running_time = ROOM_OPEN_TIME + self.delays[job]
 
         gap_end = running_time
 
@@ -272,7 +273,7 @@ class Schedule():
             print()
 
         return alpha*max_run + beta*rooms_open + gamma*weighted_emergency_wait + \
-            delta*tardiness + epsilon*bim
+            delta*tardiness + epsilon*bim + 0.00001*sum(self.delays)
 
     def _initial_schedule(self, jobs_df, n_rooms, n_electives):
         initial_schedule = [[] for _ in range(n_rooms)]
@@ -405,10 +406,12 @@ class StartDaySchedule(Schedule):
             for index, delay in enumerate(self.delays):
                 bim_options.append((DELAY_CHANGE, index, 20))
                 bim_options.append((DELAY_CHANGE, index, 120))
+                bim_options.append((DELAY_CHANGE, index, 240))
+
                 if delay >= 10:
                     bim_options.append((DELAY_CHANGE, index, -10))
                 if delay >= 30:
-                    bim_options.append((DELAY_CHANGE, index, -30))
+                    bim_options.append((DELAY_CHANGE, index, -30))     
 
         return super().perturb_options() + bim_options
 
