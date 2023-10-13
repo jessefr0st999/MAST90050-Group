@@ -16,7 +16,7 @@ def main():
     parser.add_argument('--rooms', type=int, default=5)
     parser.add_argument('--samples', type=int, default=1)
     parser.add_argument('--n_emerg', type=int, default=None)
-    parser.add_argument('--n_emerg_lambda', type=float, default=12)
+    parser.add_argument('--n_emerg_lambda', type=float, default=10)
     parser.add_argument('--elective_family_nums', type=int, nargs=4, default=[4, 3, 2, 1])
     parser.add_argument('--obj_weights', type=int, nargs=5, default=[1, 500, 1500, 3, 10])
     parser.add_argument('--bim', action='store_true', default=False)
