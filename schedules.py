@@ -243,7 +243,6 @@ class Schedule():
                 earliest_finish = room_end
             gaps = gaps | room_gaps
 
-
         # calculation of BIM
         job_starts = {gap_end for _, gap_end in gaps}
         for start in job_starts:
@@ -329,6 +328,8 @@ class Schedule():
         for room_index, room_jobs in enumerate(schedule):
             # Reverse so that both the legend and room numbers are top-to-bottom
             room_index = len(schedule) - room_index - 1
+            prev_job_info = None
+            prev_job_index = None
             for job_index in room_jobs:
                 job_info = jobs_df.iloc[job_index]
                 start = job_start_times[job_index]
@@ -336,15 +337,23 @@ class Schedule():
                     color=PLOT_COLOURS[job_info['family']], linewidth=3,
                     label=f'room {room_index + 1}, job {job_index}',
                     linestyle='solid' if job_info['emergency'] else 'dotted')
+                if prev_job_info is not None:
+                    cleaning_time = self.clean_t_same if prev_job_info['family'] == job_info['family'] \
+                        else self.clean_t_diff
+                    plt.hlines(room_index + 1, job_start_times[prev_job_index] + prev_job_info['length'],
+                        job_start_times[prev_job_index] + prev_job_info['length'] + cleaning_time,
+                        color='gray', linewidth=2)
                 if job_info['emergency']:
                     plt.plot(job_info['arrival'], room_index + 1,
                         color=PLOT_COLOURS[job_info['family']], marker='x', markersize=12)
-                    plt.annotate(f'j{job_index} (p{job_info["priority"]})',
+                    plt.annotate(f'j{job_index} ({job_info["priority"]}/10)',
                         (job_info['arrival'], room_index + 1 - 0.25),
                         color=PLOT_COLOURS[job_info['family']])
                 plt.annotate(f'j{job_index}',
                     (start, room_index + 1 + 0.15),
                     color=PLOT_COLOURS[job_info['family']])
+                prev_job_info = job_info
+                prev_job_index = job_index
         plt.vlines([ROOM_OPEN_TIME, ROOM_CLOSE_TIME], 0, len(schedule) + 1,
             color='gray', linestyle='dotted')
         plt.xlim([300, 1440])
@@ -361,7 +370,7 @@ class Schedule():
 class OracleSchedule(Schedule):
     def __init__(self, schedule=[[]], delays=[], clean_t_same=20, clean_t_diff=90,
             n_rooms=5, electives_df=pd.DataFrame(), emerg_df=pd.DataFrame(),
-            n_electives=0,obj_weights=[1,1,1,1,0]):
+            n_electives=0, obj_weights=[1,1,1,1,0]):
         self.jobs_df = pd.concat([electives_df, emerg_df], ignore_index=True)
         self.n_electives = n_electives
 
@@ -549,7 +558,7 @@ class StartDayScheduleStochElectives(StartDaySchedule):
             obj += self._eval_single_schedule(
                 pd.concat([elective_df, emerg_df], ignore_index=True), log)
             # log = False
-        return obj/len(self.electives_dfs)
+        return obj / len(self.electives_dfs)
 
     def produce_end_day_schedule(self):
         schedule_objects = []
