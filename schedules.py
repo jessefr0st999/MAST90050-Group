@@ -332,8 +332,11 @@ class Schedule():
                 if job_info['emergency']:
                     plt.plot(job_info['arrival'], room_index + 1,
                         color=PLOT_COLOURS[job_info['family']], marker='x', markersize=12)
-                    plt.annotate(f'j{job_index} ({job_info["priority"]}/10)',
+                    plt.annotate(f'j{job_index}',
                         (job_info['arrival'], room_index + 1 - 0.25),
+                        color=PLOT_COLOURS[job_info['family']])
+                    plt.annotate(f'({job_info["priority"]}/10)',
+                        (job_info['arrival'], room_index + 1 - 0.4),
                         color=PLOT_COLOURS[job_info['family']])
                 plt.annotate(f'j{job_index}',
                     (start, room_index + 1 + 0.15),
