@@ -511,11 +511,11 @@ class StartDayScheduleDetElectivesDetEmerg(StartDaySchedule):
         # restore the objective now that evaluation is complete
         self.obj_weights = obj_weights
         
-        return evaluation 
+        return evaluation
 
     def produce_end_day_schedule(self):
         schedule, delays = self._produce_single_end_day_schedule(
-            self.electives_df,self.emerg_df)
+            self.electives_df, self.emerg_df)
         self.end_day_schedule = schedule
         self.end_day_delays = delays
 

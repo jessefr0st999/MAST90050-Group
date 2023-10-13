@@ -70,7 +70,6 @@ class DetElectivesDetEmergencies():
         self.emerg_df = list_to_df(emergencies)
         self.n_electives = len(electives)
 
-
     def get_jobs(self):
         return self.n_electives, self.electives_df, self.emerg_df
 
@@ -131,10 +130,3 @@ class StochElectivesStochEmergencies():
         Return the electives as jobs with expectation as duration
         '''
         return list_to_df(self.deterministic_electives)
-
-def main():
-    jobs = DetElectivesDetEmergencies(default_elective_jobs, default_emergency_jobs)
-    print(jobs.get_jobs()[1])
-
-if __name__ == '__main__':
-    main()

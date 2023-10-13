@@ -17,13 +17,14 @@ def main():
     parser.add_argument('--samples', type=int, default=1)
     parser.add_argument('--n_emerg', type=int, default=None)
     parser.add_argument('--n_emerg_lambda', type=float, default=12)
-    parser.add_argument('--elective_family_nums', type=int, nargs=4, default=[4, 4, 2, 2])
+    parser.add_argument('--elective_family_nums', type=int, nargs=4, default=[4, 3, 2, 1])
     parser.add_argument('--obj_weights', type=int, nargs=5, default=[1, 500, 1500, 3, 10])
     parser.add_argument('--bim', action='store_true', default=False)
     parser.add_argument('--heur_it', type=int, default=3)
     parser.add_argument('--det_el', action='store_true', default=False)
     parser.add_argument('--oracle', action='store_true', default=False)
     parser.add_argument('--log', action='store_true', default=False)
+    parser.add_argument('--heur_log', action='store_true', default=False)
     parser.add_argument('--results_file', default='test_results')
     parser.add_argument('--read', action='store_true', default=False)
     args = parser.parse_args()
@@ -112,6 +113,7 @@ def main():
     
     # Otherwise, calculate the optimal start of day then end of day schedules
     if args.det_el:
+        heuristic_optimise(schedule, n_parallel=args.heur_it, log=args.heur_log)
         start_obj = schedule.eval_schedule(args.log)
         start_result, start_delays = schedule.get_schedule()
         print(f'deterministic electives, start of day:')
@@ -150,12 +152,12 @@ def main():
             print(delays)
             print()
 
-        heuristic_optimise(schedule, n_parallel=args.heur_it, log=args.log)
+        heuristic_optimise(schedule, n_parallel=args.heur_it, log=args.heur_log)
         # Log the optimal start of day schedule
         start_obj = schedule.eval_schedule(args.log)
         start_result, start_delays = schedule.get_schedule()
-        print(f'stochastic electives, start of day, after SA and LS:')
-        print(start_obj)
+        print(f'stochastic electives, start of day, after optimisation:')
+        print(round(start_obj))
         if args.log:
             print(start_result)
             print(start_delays)
@@ -171,7 +173,7 @@ def main():
         schedule.produce_end_day_schedule()
         end_av_obj, end_obj, end_results = schedule.eval_end_day_schedule(args.log)
         print(f'stochastic electives, end of day:')
-        print(end_av_obj)
+        print(round(end_av_obj))
         for i, (end_result, end_delays) in enumerate(end_results):
             output['end'].append((end_obj[i], end_result, end_delays))
             if args.log:

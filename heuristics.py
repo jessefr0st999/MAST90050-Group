@@ -1,5 +1,6 @@
 import numpy as np
 from tqdm import tqdm
+from datetime import datetime
 
 from schedules import Schedule
 
@@ -77,8 +78,9 @@ def heuristic_optimise(schedule: Schedule, n_parallel=3, log=False):
     sa = SimulatedAnnealing(schedule)
     ls = LocalSearch(schedule)
 
+    start_total = datetime.now()
     for i in range(n_parallel):
-        
+        start = datetime.now()
         if log:
             print(f'Iteration {i + 1}')
             print(f'Initial: {schedule.eval_schedule()}')
@@ -113,6 +115,7 @@ def heuristic_optimise(schedule: Schedule, n_parallel=3, log=False):
         # if log:
         #     print(f'Fourth LS: {schedule.eval_schedule()}')
         #     print()
+        print(f'Iteration {i + 1} seconds elapsed: {(datetime.now() - start).seconds}')
 
         obj = schedule.eval_schedule()
         if best_obj is None or obj < best_obj:
@@ -121,5 +124,5 @@ def heuristic_optimise(schedule: Schedule, n_parallel=3, log=False):
 
         schedule.set_schedule(initial_schedule, initial_delays) 
 
-    
+    print(f'Total seconds elapsed: {(datetime.now() - start_total).seconds}')
     schedule.set_schedule(best_schedule, best_delays)
