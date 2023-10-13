@@ -286,16 +286,13 @@ class Schedule():
         initial_delays = [0] * n_electives
         return initial_schedule, initial_delays
     
-    def get_job_start_times(self, schedule, jobs_df, delays=None, elective_arrivals=None):
-        elective_only = elective_arrivals is None
+    def get_job_start_times(self, schedule, delays, jobs_df):
         job_start_times = {}
         for room_jobs in schedule:
             prev_job_info = None
             prev_job_index = None
             for job_index in room_jobs:
                 job_info = jobs_df.iloc[job_index]
-                if elective_only and job_info['emergency']:
-                    continue
                 if prev_job_info is not None:
                     cleaning_time = self.clean_t_same if prev_job_info['family'] == job_info['family'] \
                         else self.clean_t_diff
@@ -303,28 +300,16 @@ class Schedule():
                         job_start_times[prev_job_index] + prev_job_info['length'] + cleaning_time])
                 else:
                     job_start_times[job_index] = job_info['arrival']
-                # If only looking at electives, increment start time by delay to get arrival time
-                if elective_only:
-                    job_start_times[job_index] += delays[job_index]
-                # If looking at both, bump elective start time to arrival time if not there already
-                elif not job_info['emergency'] and \
-                        job_start_times[job_index] < elective_arrivals[job_index]:
-                    job_start_times[job_index] = elective_arrivals[job_index]
+                # Bump elective start time to arrival time if not there already
+                if not job_info['emergency'] and \
+                        job_start_times[job_index] < ROOM_OPEN_TIME + delays[job_index]:
+                    job_start_times[job_index] = ROOM_OPEN_TIME + delays[job_index]
                 prev_job_info = job_info
                 prev_job_index = job_index
         return job_start_times
     
     def plot(self, schedule, delays, jobs_df, title=None):
-        # TODO: Redo with delays formulated as actual arrival times
-        # Run first to determine the effective arrival times of the elective jobs
-        elective_job_start_times = self.get_job_start_times(schedule, jobs_df,
-            delays=delays)
-        # Run again using these arrivals to find the start times of all jobs
-        job_start_times = self.get_job_start_times(schedule, jobs_df,
-            elective_arrivals=elective_job_start_times)
-        # for k, v in job_start_times.items():
-        #     print(k, round(v), round(v + jobs_df.iloc[k]['length']))
-
+        job_start_times = self.get_job_start_times(schedule, delays, jobs_df)
         figure = plt.figure()
         for room_index, room_jobs in enumerate(schedule):
             # Reverse so that both the legend and room numbers are top-to-bottom
