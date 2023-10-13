@@ -314,7 +314,8 @@ class Schedule():
                 prev_job_index = job_index
         return job_start_times
     
-    def plot(self, schedule, delays, jobs_df):
+    def plot(self, schedule, delays, jobs_df, title=None):
+        # TODO: Redo with delays formulated as actual arrival times
         # Run first to determine the effective arrival times of the elective jobs
         elective_job_start_times = self.get_job_start_times(schedule, jobs_df,
             delays=delays)
@@ -353,6 +354,8 @@ class Schedule():
         plt.xlabel('minutes into day')
         plt.ylabel('room number')
         # plt.legend()
+        if title:
+            plt.title(title)
         plt.show()
 
 class OracleSchedule(Schedule):

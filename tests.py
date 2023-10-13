@@ -1,4 +1,5 @@
 import argparse
+import pickle
 
 import pandas as pd
 import numpy as np
@@ -19,8 +20,14 @@ def main():
     parser.add_argument('--elective_family_nums', type=int, nargs=4, default=[4, 4, 2, 2])
     parser.add_argument('--obj_weights', type=int, nargs=5, default=[1, 500, 1500, 3, 10])
     parser.add_argument('--bim', action='store_true', default=False)
+    parser.add_argument('--stoch_el', action='store_true', default=False)
+    parser.add_argument('--oracle', action='store_true', default=False)
+    parser.add_argument('--log', action='store_true', default=False)
+    parser.add_argument('--results_file', default='test_results')
+    parser.add_argument('--read', action='store_true', default=False)
     args = parser.parse_args()
 
+    # TODO: implement deterministic electives and oracle
     # jobs = DetElectivesDetEmergencies(default_elective_jobs, default_emergency_jobs)
     # n, elect_df, emerg_df = jobs.get_jobs()
     # schedule = OracleSchedule(electives_df=elect_df, emerg_df=emerg_df, n_electives=n)
@@ -44,10 +51,13 @@ def main():
     )
     job_generator.generate_samples(args.samples)
     n_electives, elective_dfs, emerg_dfs = job_generator.get_jobs()
-    for sample in range(args.samples):
-        print(f'Sample {sample + 1}')
-        print(pd.concat([elective_dfs[sample], emerg_dfs[sample]], ignore_index=True))
-        print()
+    jobs_dfs = [pd.concat([elective_dfs[i], emerg_dfs[i]], ignore_index=True)
+        for i in range(args.samples)]
+    if args.log:
+        for i in range(args.samples):
+            print(f'Sample {i + 1}')
+            print(jobs_dfs[i])
+            print()
 
     schedule = StartDayScheduleStochElectives(
         n_electives=n_electives,
@@ -57,41 +67,79 @@ def main():
         obj_weights=args.obj_weights,
         bim=args.bim,
     )
+    
+    if args.read:
+        with open(f'results/{args.results_file}.pkl', 'rb') as f:
+            output = pickle.load(f)
+        start_obj, start_result, start_delays = output['start']
+        end_objectives = []
+        for i in range(args.samples):
+            end_obj, end_result, end_delays = output['end'][i]
+            print(f'sample {i + 1} end objective: {end_obj}')
+            schedule.plot(start_result, start_delays, output['jobs'][i],
+                title=f'sample {i + 1} start')
+            schedule.plot(end_result, end_delays, output['jobs'][i],
+                title=f'sample {i + 1} end')
+            end_objectives.append(end_obj)
+        print()
+        print(f'start objective: {start_obj}')
+        print(f'end objective: {sum(end_objectives) / len(end_objectives)}')
+        return
 
-    objective = schedule.eval_schedule()
-    result, delays = schedule.get_schedule()
-    print('stochastic electives, start of day, initial:')
-    print(objective, result)
-    print()
+    if args.log:
+        objective = schedule.eval_schedule()
+        result, delays = schedule.get_schedule()
+        print(f'stochastic electives, start of day, initial:')
+        print(objective)
+        print(result)
+        print(delays)
+        print()
 
     sa = SimulatedAnnealing(schedule)
     ls = LocalSearch(schedule)
     sa.sa()
-    objective = schedule.eval_schedule()
-    result, delays = schedule.get_schedule()
-    print('stochastic electives, start of day, after SA:')
-    print(objective, result, delays)
-    print('\n')
+    if args.log:
+        print('stochastic electives, start of day, after SA:')
+        objective = schedule.eval_schedule()
+        result, delays = schedule.get_schedule()
+        print(objective)
+        print(result)
+        print(delays)
+        print('\n')
 
     ls.local_search()
-    objective = schedule.eval_schedule(True)
-    result, delays = schedule.get_schedule()
-    print('stochastic electives, start of day, after SA and LS:')
-    print(objective, result, delays)
-    print('\n')
-
-    for sample in range(args.samples):
-        jobs_df = pd.concat([elective_dfs[sample], emerg_dfs[sample]], ignore_index=True)
-        schedule.plot(result, delays, jobs_df)
+    print(f'stochastic electives, start of day, after SA and LS:')
+    start_obj = schedule.eval_schedule(args.log)
+    start_result, start_delays = schedule.get_schedule()
+    print(start_obj)
+    if args.log:
+        print(start_result)
+        print(start_delays)
+        print('\n')
+        for i in range(args.samples):
+            schedule.plot(start_result, start_delays, jobs_dfs[i])
+    output = {
+        'start': (start_obj, start_result, start_delays),
+        'end': [],
+        'jobs': jobs_dfs,
+    }
 
     schedule.produce_end_day_schedule()
-    objective, _, results = schedule.eval_end_day_schedule(True)
-    print('stochastic electives, end of day:')
-    print(objective)
-    for result, delays in results:
-        print(result, delays)
-        jobs_df = pd.concat([elective_dfs[sample], emerg_dfs[sample]], ignore_index=True)
-        schedule.plot(result, delays, jobs_df)
+    print(f'stochastic electives, end of day:')
+    end_av_obj, end_obj, end_results = schedule.eval_end_day_schedule(args.log)
+    print(end_av_obj)
+    for i, (end_result, end_delays) in enumerate(end_results):
+        output['end'].append((end_obj[i], end_result, end_delays))
+        if args.log:
+            print(f'stochastic electives (sample {i + 1}), end of day:')
+            print(end_obj[i])
+            print(end_result)
+            print(end_delays)
+            print()
+            schedule.plot(end_result, end_delays, jobs_dfs[i])
+
+    with open(f'results/{args.results_file}.pkl', 'wb') as f:
+        pickle.dump(output, f)
 
 if __name__ == '__main__':
     main()
