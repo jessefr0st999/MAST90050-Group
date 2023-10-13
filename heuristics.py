@@ -66,7 +66,7 @@ class LocalSearch():
 
 def heuristic_optimise(schedule: Schedule, n_parallel=3, log=False):
     '''
-    Run a mix of simulated anealing and local search from the initial solution 
+    Run a mix of simulated annealing and local search from the initial solution 
     n_parallel times, taking the best solution eventually found
     '''
     initial_schedule, initial_delays = schedule.get_schedule()
@@ -80,38 +80,38 @@ def heuristic_optimise(schedule: Schedule, n_parallel=3, log=False):
     for i in range(n_parallel):
         
         if log:
-            print(f"Iteration {i + 1}")
-            print(f"Initial: {schedule.eval_schedule()}")
+            print(f'Iteration {i + 1}')
+            print(f'Initial: {schedule.eval_schedule()}')
 
         sa.sa(t_start=800, t_min=400)
         sa.sa(t_start=800, t_min=400)
         if log:
-            print(f"First SA: {schedule.eval_schedule()}")
+            print(f'First SA: {schedule.eval_schedule()}')
         ls.local_search()
         if log:
-            print(f"First LS: {schedule.eval_schedule()}")
+            print(f'First LS: {schedule.eval_schedule()}')
         sa.sa(t_start=20, t_min=1)
         sa.sa(t_start=10, t_min=1)
         if log:
-            print(f"Second SA: {schedule.eval_schedule()}")
+            print(f'Second SA: {schedule.eval_schedule()}')
         ls.local_search()
         if log:
-            print(f"Second LS: {schedule.eval_schedule()}")
+            print(f'Second LS: {schedule.eval_schedule()}')
         sa.sa(t_start=5, t_min=1)
         sa.sa(t_start=5, t_min=1)
         sa.sa(t_start=5, t_min=1)
         if log:
-            print(f"Third SA: {schedule.eval_schedule()}")
+            print(f'Third SA: {schedule.eval_schedule()}')
         ls.local_search()
         if log:
-            print(f"Third LS: {schedule.eval_schedule()}")
+            print(f'Third LS: {schedule.eval_schedule()}')
         # sa.sa(t_start=5, t_min=1)
         # sa.sa(t_start=5, t_min=1)
         # if log:
-        #     print(f"Fourth SA: {schedule.eval_schedule()}")
+        #     print(f'Fourth SA: {schedule.eval_schedule()}')
         # ls.local_search()
         # if log:
-        #     print(f"Fourth LS: {schedule.eval_schedule()}")
+        #     print(f'Fourth LS: {schedule.eval_schedule()}')
         #     print()
 
         obj = schedule.eval_schedule()

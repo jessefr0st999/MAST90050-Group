@@ -8,7 +8,7 @@ from schedules import OracleSchedule, StartDayScheduleDetElectivesDetEmerg, \
     StartDayScheduleStochElectives
 from jobs import DetElectivesDetEmergencies, StochElectivesStochEmergencies, \
     default_elective_jobs, default_emergency_jobs
-from heuristics import SimulatedAnnealing, LocalSearch
+from heuristics import SimulatedAnnealing, LocalSearch, heuristic_optimise
 
 def main():
     parser = argparse.ArgumentParser()
@@ -20,6 +20,7 @@ def main():
     parser.add_argument('--elective_family_nums', type=int, nargs=4, default=[4, 4, 2, 2])
     parser.add_argument('--obj_weights', type=int, nargs=5, default=[1, 500, 1500, 3, 10])
     parser.add_argument('--bim', action='store_true', default=False)
+    parser.add_argument('--heur_it', type=int, default=3)
     parser.add_argument('--det_el', action='store_true', default=False)
     parser.add_argument('--oracle', action='store_true', default=False)
     parser.add_argument('--log', action='store_true', default=False)
@@ -149,21 +150,8 @@ def main():
             print(delays)
             print()
 
-        sa = SimulatedAnnealing(schedule)
-        sa.sa()
-        # Log the start of day schedule after a round of SA
-        if args.log:
-            objective = schedule.eval_schedule()
-            result, delays = schedule.get_schedule()
-            print('stochastic electives, start of day, after SA:')
-            print(objective)
-            print(result)
-            print(delays)
-            print('\n')
-
-        ls = LocalSearch(schedule)
-        ls.local_search()
-        # Log the "optimal" start of day schedule after a local search
+        heuristic_optimise(schedule, n_parallel=args.heur_it, log=args.log)
+        # Log the optimal start of day schedule
         start_obj = schedule.eval_schedule(args.log)
         start_result, start_delays = schedule.get_schedule()
         print(f'stochastic electives, start of day, after SA and LS:')
