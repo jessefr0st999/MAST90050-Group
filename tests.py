@@ -100,8 +100,7 @@ def main():
     if args.read_results:
         with open(f'results/{args.results_file}.pkl', 'rb') as f:
             output = pickle.load(f)
-        # start_obj, start_obj_detailed, start_result, start_delays = output['start']
-        start_obj, start_result, start_delays = output['start']
+        start_obj, start_obj_detailed, start_result, start_delays = output['start']
         print(f'start objective: {start_obj}')
         end_objectives = []
         end_obj_detailed_av = [0 for _ in range(5)]
@@ -137,7 +136,7 @@ def main():
         start_obj, start_obj_detailed = schedule.eval_schedule(args.log, detailed=True)
         start_result, start_delays = schedule.get_schedule()
         print(f'deterministic electives, start of day:')
-        print(start_obj)
+        print(round(start_obj))
         print(start_obj_detailed)
         if args.log:
             print(start_result)
@@ -154,7 +153,7 @@ def main():
             (end_obj, end_obj_detailed), (end_result, end_delays) = \
                 schedule.eval_end_day_schedule(args.log, detailed=True)
             print(f'deterministic electives, end of day:')
-            print(end_obj)
+            print(round(end_obj))
             print(end_obj_detailed)
             if args.log:
                 print(end_result)
@@ -170,7 +169,7 @@ def main():
             objective, obj_detailed = schedule.eval_schedule(detailed=True)
             result, delays = schedule.get_schedule()
             print(f'stochastic electives, start of day, initial:')
-            print(objective)
+            print(round(objective))
             print(obj_detailed)
             print(result)
             print(delays)
