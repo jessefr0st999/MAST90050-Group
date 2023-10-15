@@ -38,7 +38,7 @@ class Schedule():
         self.alt_schedule = [[]]
         self.alt_delays = []
     
-    def eval_schedule(self, log=False):
+    def eval_schedule(self, log=False, detailed=False):
         '''
         Abstract function
         Return an evaluation for the current schedule
@@ -109,11 +109,11 @@ class Schedule():
             self.alt_schedule = self.schedule
             self.alt_delays = new_delays
 
-    def eval_alt_schedule(self, log=False):
+    def eval_alt_schedule(self, log=False, detailed=False):
         schedule, delays = self.schedule, self.delays
         self.schedule = self.alt_schedule
         self.delays = self.alt_delays
-        obj = self.eval_schedule(log=log)
+        obj = self.eval_schedule(log=log, detailed=detailed)
         self.schedule = schedule
         self.delays = delays
         return obj
@@ -207,7 +207,7 @@ class Schedule():
         running_time += self.clean_t_same
         return running_time, weighted_emergency_time, gaps, last_end
 
-    def _eval_single_schedule(self, jobs_df, log=False):
+    def _eval_single_schedule(self, jobs_df, log=False, detailed=False):
         '''
         Evaluate a single schedule, given fixed job information
         '''
@@ -272,6 +272,11 @@ class Schedule():
             print('epsilon:', epsilon, bim, epsilon * bim)
             print()
 
+        if detailed:
+            return alpha*max_run + beta*rooms_open + gamma*weighted_emergency_wait + \
+                    delta*tardiness + epsilon*bim + 0.00001*sum(self.delays), \
+                [max_run, rooms_open, weighted_emergency_wait, tardiness, bim]
+        
         return alpha*max_run + beta*rooms_open + gamma*weighted_emergency_wait + \
             delta*tardiness + epsilon*bim + 0.00001*sum(self.delays)
 
@@ -308,9 +313,13 @@ class Schedule():
                 prev_job_index = job_index
         return job_start_times
     
-    def plot(self, schedule, delays, jobs_df, title=None):
+    def plot(self, schedule, delays, jobs_df, title=None, axis=None):
         job_start_times = self.get_job_start_times(schedule, delays, jobs_df)
-        figure = plt.figure()
+        show = False
+        if axis is None:
+            show = True
+            figure = plt.figure()
+            axis = plt.gca()
         for room_index, room_jobs in enumerate(schedule):
             # Reverse so that both the legend and room numbers are top-to-bottom
             room_index = len(schedule) - room_index - 1
@@ -319,42 +328,43 @@ class Schedule():
             for job_index in room_jobs:
                 job_info = jobs_df.iloc[job_index]
                 start = job_start_times[job_index]
-                plt.hlines(room_index + 1, start, start + job_info['length'],
+                axis.hlines(room_index + 1, start, start + job_info['length'],
                     color=PLOT_COLOURS[job_info['family']], linewidth=3,
                     label=f'room {room_index + 1}, job {job_index}',
                     linestyle='solid' if job_info['emergency'] else 'dotted')
                 if prev_job_info is not None:
                     cleaning_time = self.clean_t_same if prev_job_info['family'] == job_info['family'] \
                         else self.clean_t_diff
-                    plt.hlines(room_index + 1, job_start_times[prev_job_index] + prev_job_info['length'],
+                    axis.hlines(room_index + 1, job_start_times[prev_job_index] + prev_job_info['length'],
                         job_start_times[prev_job_index] + prev_job_info['length'] + cleaning_time,
                         color='gray', linewidth=2)
                 if job_info['emergency']:
-                    plt.plot(job_info['arrival'], room_index + 1,
+                    axis.plot(job_info['arrival'], room_index + 1,
                         color=PLOT_COLOURS[job_info['family']], marker='x', markersize=12)
-                    plt.annotate(f'j{job_index}',
-                        (job_info['arrival'], room_index + 1 - 0.25),
+                    axis.annotate(f'j{job_index}',
+                        (job_info['arrival'], room_index + 1 - 0.35),
                         color=PLOT_COLOURS[job_info['family']])
-                    plt.annotate(f'({job_info["priority"]}/10)',
-                        (job_info['arrival'], room_index + 1 - 0.4),
-                        color=PLOT_COLOURS[job_info['family']])
-                plt.annotate(f'j{job_index}',
-                    (start, room_index + 1 + 0.15),
+                    # axis.annotate(f'({job_info["priority"]}/10)',
+                    #     (job_info['arrival'], room_index + 1 - 0.4),
+                    #     color=PLOT_COLOURS[job_info['family']])
+                label = f'j{job_index} ({job_info["priority"]})' \
+                    if job_info['emergency'] else f'j{job_index}'
+                axis.annotate(label, (start, room_index + 1 + 0.2),
                     color=PLOT_COLOURS[job_info['family']])
                 prev_job_info = job_info
                 prev_job_index = job_index
-        plt.vlines([ROOM_OPEN_TIME, ROOM_CLOSE_TIME], 0, len(schedule) + 1,
+        axis.vlines([ROOM_OPEN_TIME, ROOM_CLOSE_TIME], 0, len(schedule) + 1,
             color='gray', linestyle='dotted')
-        plt.xlim([300, 1440])
-        plt.ylim([0.1, len(schedule) + 0.9])
-        axis = plt.gca()
+        axis.set_xlim([300, 1440])
+        axis.set_ylim([0.1, len(schedule) + 0.9])
         axis.yaxis.set_major_locator(MaxNLocator(integer=True))
-        plt.xlabel('minutes into day')
-        plt.ylabel('room number')
-        # plt.legend()
+        axis.set_xlabel('minutes into day')
+        axis.set_ylabel('room number')
+        # axis.legend()
         if title:
-            plt.title(title)
-        plt.show()
+            axis.set_title(title)
+        if show:
+            plt.show()
 
 class OracleSchedule(Schedule):
     def __init__(self, schedule=[[]], delays=[], clean_t_same=20, clean_t_diff=90,
@@ -371,8 +381,8 @@ class OracleSchedule(Schedule):
         super().__init__(initial_schedule, initial_delays, clean_t_same,
             clean_t_diff, n_rooms, obj_weights)
     
-    def eval_schedule(self, log=False):
-        return self._eval_single_schedule(self.jobs_df, log)
+    def eval_schedule(self, log=False, detailed=False):
+        return self._eval_single_schedule(self.jobs_df, log, detailed)
     
 
 class StartDaySchedule(Schedule):
@@ -471,7 +481,7 @@ class StartDaySchedule(Schedule):
 
         return new_sched, self.delays
 
-    def eval_end_day_schedule(self):
+    def eval_end_day_schedule(self, detailed=False):
         '''
         A function to evaluate the performance of the end of day schedule/s
         '''
@@ -494,10 +504,10 @@ class StartDayScheduleDetElectivesDetEmerg(StartDaySchedule):
         super().__init__(initial_schedule, initial_delays, clean_t_same,
             clean_t_diff, n_rooms, bim, obj_weights)
     
-    def eval_schedule(self, log=False):
-        return self._eval_single_schedule(self.jobs_df,log)
+    def eval_schedule(self, log=False, detailed=False):
+        return self._eval_single_schedule(self.jobs_df, log, detailed)
     
-    def eval_end_day_schedule(self, log=False):
+    def eval_end_day_schedule(self, log=False, detailed=False):
         if self.end_day_schedule is None or self.end_day_delays is None:
             raise Exception('No end of day schedule has been determined')
         
@@ -506,7 +516,7 @@ class StartDayScheduleDetElectivesDetEmerg(StartDaySchedule):
         self.obj_weights[-1] = 0
 
         self.set_alt_schedule(self.end_day_schedule, self.end_day_delays)
-        evaluation = self.eval_alt_schedule(log), (self.end_day_schedule, self.end_day_delays)
+        evaluation = self.eval_alt_schedule(log, detailed), (self.end_day_schedule, self.end_day_delays)
         
         # restore the objective now that evaluation is complete
         self.obj_weights = obj_weights
@@ -541,14 +551,21 @@ class StartDayScheduleStochElectives(StartDaySchedule):
         super().__init__(initial_schedule, initial_delays, clean_t_same, clean_t_diff,
             n_rooms, bim, obj_weights)
     
-    def eval_schedule(self, log=False):
+    def eval_schedule(self, log=False, detailed=False):
         obj = 0
+        detailed_obj = [0 for _ in range(5)]
         # if log:
         #     print('Logging one evaluation only')
         for elective_df, emerg_df in zip(self.electives_dfs, self.emerg_dfs):
-            obj += self._eval_single_schedule(
-                pd.concat([elective_df, emerg_df], ignore_index=True), log)
+            output = self._eval_single_schedule(
+                pd.concat([elective_df, emerg_df], ignore_index=True), log, True)
+            obj += output[0]
+            for i in range(5):
+                detailed_obj[i] += output[1][i]
             # log = False
+        if detailed:
+            return obj / len(self.electives_dfs), \
+                [x / len(self.electives_dfs) for x in detailed_obj]
         return obj / len(self.electives_dfs)
 
     def produce_end_day_schedule(self):
@@ -571,7 +588,7 @@ class StartDayScheduleStochElectives(StartDaySchedule):
         
         self.end_day_schedule_objects = schedule_objects
         
-    def eval_end_day_schedule(self, log=False):
+    def eval_end_day_schedule(self, log=False, detailed=False):
         '''
         A function to evaluate the performance of the end of day schedules
         '''
@@ -583,13 +600,18 @@ class StartDayScheduleStochElectives(StartDaySchedule):
         self.obj_weights[-1] = 0
 
         # evaluate each of the realisations of the day
-        evaluations = []
+        evals = []
+        evals_detailed = []
         schedules = []
         for single_instance in self.end_day_schedule_objects:
-            obj, (schedule, delays) = single_instance.eval_end_day_schedule(log)
-            evaluations.append(obj)
+            (obj, obj_detailed), (schedule, delays) = single_instance.eval_end_day_schedule(log, True)
+            evals.append(obj)
+            evals_detailed.append(obj_detailed)
             schedules.append((schedule, delays))
 
         # restore the objective now that evaluation is complete
         self.obj_weights = obj_weights
-        return sum(evaluations) / len(evaluations), evaluations, schedules
+        if detailed:
+            return (evals, evals_detailed), schedules
+        else:
+            return evals, schedules

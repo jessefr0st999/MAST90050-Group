@@ -3,6 +3,7 @@ import pickle
 
 import pandas as pd
 import numpy as np
+import matplotlib.pyplot as plt
 
 from schedules import OracleSchedule, StartDayScheduleDetElectivesDetEmerg, \
     StartDayScheduleStochElectives
@@ -26,7 +27,9 @@ def main():
     parser.add_argument('--log', action='store_true', default=False)
     parser.add_argument('--heur_log', action='store_true', default=False)
     parser.add_argument('--results_file', default='test_results')
-    parser.add_argument('--read', action='store_true', default=False)
+    parser.add_argument('--read_results', action='store_true', default=False)
+    parser.add_argument('--jobs_file', default='test_jobs')
+    parser.add_argument('--read_jobs', action='store_true', default=False)
     args = parser.parse_args()
 
     # This seeds the jobs but not the solutions
@@ -64,13 +67,19 @@ def main():
             *['Hepatobilary'] * num_h,
             *['Cardiothoracic'] * num_c,
         ]
-        job_generator = StochElectivesStochEmergencies(
-            elective_families=elective_families,
-            n_emerg=args.n_emerg,
-            n_emerg_lambda=args.n_emerg_lambda,
-        )
-        job_generator.generate_samples(args.samples)
-        n_electives, elective_dfs, emerg_dfs = job_generator.get_jobs()
+        if args.read_jobs:
+            with open(f'jobs/{args.jobs_file}.pkl', 'rb') as f:
+                n_electives, elective_dfs, emerg_dfs = pickle.load(f)
+        else:
+            job_generator = StochElectivesStochEmergencies(
+                elective_families=elective_families,
+                n_emerg=args.n_emerg,
+                n_emerg_lambda=args.n_emerg_lambda,
+            )
+            job_generator.generate_samples(args.samples)
+            n_electives, elective_dfs, emerg_dfs = job_generator.get_jobs()
+            with open(f'jobs/{args.jobs_file}.pkl', 'wb') as f:
+                pickle.dump((n_electives, elective_dfs, emerg_dfs), f)
         jobs_dfs = [pd.concat([elective_dfs[i], emerg_dfs[i]], ignore_index=True)
             for i in range(args.samples)]
         if args.log:
@@ -88,76 +97,92 @@ def main():
         )
     
     # If schedules have already been calculated, plot them
-    if args.read:
+    if args.read_results:
         with open(f'results/{args.results_file}.pkl', 'rb') as f:
             output = pickle.load(f)
+        # start_obj, start_obj_detailed, start_result, start_delays = output['start']
         start_obj, start_result, start_delays = output['start']
-        print()
         print(f'start objective: {start_obj}')
         end_objectives = []
-        print(output['end'])
+        end_obj_detailed_av = [0 for _ in range(5)]
+        figure, axes = plt.subplots(2, 2, layout='compressed')
+        axes = iter(axes.T.flatten())
         for i in range(args.samples):
+            axis = next(axes)
             schedule.plot(start_result, start_delays, output['jobs'][i],
-                title=f'sample {i + 1} start')
+                title=f'sample {i + 1} start', axis=axis)
             if args.oracle:
                 return
-            end_obj, end_result, end_delays = output['end'][i]
-            print(f'sample {i + 1} end objective: {end_obj}')
-            schedule.plot(end_result, end_delays, output['jobs'][i],
-                title=f'sample {i + 1} end')
+            end_obj, end_obj_detailed, end_result, end_delays = output['end'][i]
             end_objectives.append(end_obj)
+            for j in range(5):
+                end_obj_detailed_av[j] += end_obj_detailed[j] / args.samples
+            print(f'sample {i + 1} end objective: {end_obj}')
+            print(f'sample {i + 1} end objective details: {end_obj_detailed}')
+            axis = next(axes)
+            schedule.plot(end_result, end_delays, output['jobs'][i],
+                title=f'sample {i + 1} end', axis=axis)
             if args.det_el:
                 break
-        print(f'end objective: {sum(end_objectives) / len(end_objectives)}')
+            if i == 1:
+                break
+        plt.show()
+        print(f'end objective: {round(sum(end_objectives) / len(end_objectives))}')
+        print(f'end objective details: {[x for x in end_obj_detailed_av]}')
         return
     
     # Otherwise, calculate the optimal start of day then end of day schedules
     if args.det_el:
         heuristic_optimise(schedule, n_parallel=args.heur_it, log=args.heur_log)
-        start_obj = schedule.eval_schedule(args.log)
+        start_obj, start_obj_detailed = schedule.eval_schedule(args.log, detailed=True)
         start_result, start_delays = schedule.get_schedule()
         print(f'deterministic electives, start of day:')
         print(start_obj)
+        print(start_obj_detailed)
         if args.log:
             print(start_result)
             print(start_delays)
             print('\n')
             schedule.plot(start_result, start_delays, jobs_df)
         output = {
-            'start': (start_obj, start_result, start_delays),
+            'start': (start_obj, start_obj_detailed, start_result, start_delays),
             'end': [],
             'jobs': [jobs_df],
         }
         if not args.oracle:
             schedule.produce_end_day_schedule()
-            end_obj, (end_result, end_delays) = schedule.eval_end_day_schedule(args.log)
+            (end_obj, end_obj_detailed), (end_result, end_delays) = \
+                schedule.eval_end_day_schedule(args.log, detailed=True)
             print(f'deterministic electives, end of day:')
             print(end_obj)
+            print(end_obj_detailed)
             if args.log:
                 print(end_result)
                 print(end_delays)
                 print('\n')
                 schedule.plot(end_result, end_delays, jobs_df)
-            output['end'] = [(end_obj, end_result, end_delays)]
+            output['end'] = [(end_obj, end_obj_detailed, end_result, end_delays)]
         with open(f'results/{args.results_file}.pkl', 'wb') as f:
             pickle.dump(output, f)
     else:
         # Log the first guess for the start of day schedule
         if args.log:
-            objective = schedule.eval_schedule()
+            objective, obj_detailed = schedule.eval_schedule(detailed=True)
             result, delays = schedule.get_schedule()
             print(f'stochastic electives, start of day, initial:')
             print(objective)
+            print(obj_detailed)
             print(result)
             print(delays)
             print()
 
         heuristic_optimise(schedule, n_parallel=args.heur_it, log=args.heur_log)
         # Log the optimal start of day schedule
-        start_obj = schedule.eval_schedule(args.log)
+        start_obj, start_obj_detailed = schedule.eval_schedule(args.log, detailed=True)
         start_result, start_delays = schedule.get_schedule()
         print(f'stochastic electives, start of day, after optimisation:')
         print(round(start_obj))
+        print(start_obj_detailed)
         if args.log:
             print(start_result)
             print(start_delays)
@@ -165,20 +190,27 @@ def main():
             for i in range(args.samples):
                 schedule.plot(start_result, start_delays, jobs_dfs[i])
         output = {
-            'start': (start_obj, start_result, start_delays),
+            'start': (start_obj, start_obj_detailed, start_result, start_delays),
             'end': [],
             'jobs': jobs_dfs,
         }
 
         schedule.produce_end_day_schedule()
-        end_av_obj, end_obj, end_results = schedule.eval_end_day_schedule(args.log)
+        (end_obj, end_obj_detailed), end_results = \
+            schedule.eval_end_day_schedule(args.log, True)
+        end_obj_detailed_av = [0 for _ in range(5)]
+        for details in end_obj_detailed:
+            for i in range(5):
+                end_obj_detailed_av[i] += details[i] / len(end_obj_detailed)
         print(f'stochastic electives, end of day:')
-        print(round(end_av_obj))
+        print(round(sum(end_obj) / len(end_obj)))
+        print(end_obj_detailed_av)
         for i, (end_result, end_delays) in enumerate(end_results):
-            output['end'].append((end_obj[i], end_result, end_delays))
+            output['end'].append((end_obj[i], end_obj_detailed[i], end_result, end_delays))
             if args.log:
                 print(f'stochastic electives (sample {i + 1}), end of day:')
                 print(end_obj[i])
+                print(end_obj_detailed[i])
                 print(end_result)
                 print(end_delays)
                 print()
