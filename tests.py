@@ -104,9 +104,10 @@ def main():
         print(f'start objective: {start_obj}')
         end_objectives = []
         end_obj_detailed_av = [0 for _ in range(5)]
-        figure, axes = plt.subplots(2, 2, layout='compressed')
-        axes = iter(axes.T.flatten())
         for i in range(args.samples):
+            if i % 2 == 0:
+                figure, axes = plt.subplots(2, 2, layout='compressed')
+                axes = iter(axes.T.flatten())
             axis = next(axes)
             schedule.plot(start_result, start_delays, output['jobs'][i],
                 title=f'sample {i + 1} start', axis=axis)
@@ -122,8 +123,6 @@ def main():
             schedule.plot(end_result, end_delays, output['jobs'][i],
                 title=f'sample {i + 1} end', axis=axis)
             if args.det_el:
-                break
-            if i == 1:
                 break
         plt.show()
         print(f'end objective: {round(sum(end_objectives) / len(end_objectives))}')
