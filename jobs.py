@@ -58,8 +58,10 @@ def list_to_df(job_list):
     '''
     Format job list as a DataFrame
     '''
-    return pd.DataFrame(job_list, columns=['length', 'arrival', 'priority',
-        'family', 'emergency']).sort_values(by=['arrival', 'length'], ignore_index=True)
+    df = pd.DataFrame(job_list, columns=['length', 'arrival', 'priority',
+        'family', 'emergency']).sort_values(by=['arrival', 'length']).reset_index()
+    df = df.rename(columns={'index': 'orig_index'})
+    return df
 
 
 class DetElectivesDetEmergencies():
@@ -114,7 +116,6 @@ class StochElectivesStochEmergencies():
                 emergs_sample.append([length, arrival, priority, family, True])
 
             emerg_dfs.append(list_to_df(emergs_sample))
-
         self.elective_dfs = elective_dfs
         self.emerg_dfs = emerg_dfs
 
