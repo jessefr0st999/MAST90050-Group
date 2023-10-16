@@ -1,6 +1,5 @@
 @REM Deterministic electives
 python311 tests.py --det_el --bim --results_file det_el_bim --heur_log
-python311 tests.py --det_el --results_file det_el_no_bim --heur_log
 python311 tests.py --det_el --oracle --results_file oracle --heur_log
 
 @REM Stochastic electives (BIM and no BIM)

@@ -9,7 +9,7 @@ from schedules import OracleSchedule, StartDayScheduleDetElectivesDetEmerg, \
     StartDayScheduleStochElectives
 from jobs import DetElectivesDetEmergencies, StochElectivesStochEmergencies, \
     default_elective_jobs, default_emergency_jobs
-from heuristics import SimulatedAnnealing, LocalSearch, heuristic_optimise
+from heuristics import heuristic_optimise
 
 def main():
     parser = argparse.ArgumentParser()
@@ -33,7 +33,6 @@ def main():
     args = parser.parse_args()
 
     # This seeds the jobs but not the solutions
-    # TODO: Find out a way to seed the solutions
     if args.seed:
         np.random.seed(args.seed)
 
