@@ -54,13 +54,15 @@ default_emergency_jobs = [
 #     minute_str = str(minute) if minute >= 10 else f'0{minute}'
 #     return f'{hour}:{minute_str}'
 
-def list_to_df(job_list):
+def list_to_df(job_list, sort=False):
     '''
     Format job list as a DataFrame
     '''
     df = pd.DataFrame(job_list, columns=['length', 'arrival', 'priority',
-        'family', 'emergency']).sort_values(by=['arrival', 'length']).reset_index()
-    df = df.rename(columns={'index': 'orig_index'})
+        'family', 'emergency'])
+    if sort:
+        df = df.sort_values(by=['arrival', 'length']).reset_index()
+        df = df.rename(columns={'index': 'orig_index'})
     return df
 
 
@@ -69,7 +71,7 @@ class DetElectivesDetEmergencies():
         self.electives = electives
         self.emergencies = emergencies
         self.electives_df = list_to_df(electives)
-        self.emerg_df = list_to_df(emergencies)
+        self.emerg_df = list_to_df(emergencies, sort=True)
         self.n_electives = len(electives)
 
     def get_jobs(self):
@@ -115,7 +117,7 @@ class StochElectivesStochEmergencies():
                 priority = int(min(max(np.random.normal(5, self.priority_sd), 0), 10))
                 emergs_sample.append([length, arrival, priority, family, True])
 
-            emerg_dfs.append(list_to_df(emergs_sample))
+            emerg_dfs.append(list_to_df(emergs_sample, sort=True))
         self.elective_dfs = elective_dfs
         self.emerg_dfs = emerg_dfs
 
