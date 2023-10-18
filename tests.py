@@ -56,7 +56,7 @@ def main():
             elective_df = elective_dfs[0]
 
         model = exact_solve(jobs_df=elective_df, n_electives=n_electives, n_rooms=args.rooms, obj_weights=args.obj_weights, hard_time=60*args.gurobi_minutes)
-        print(f"\nBest gurobi solution found for first sample of jobs file {args.job_file}: {model.ObjVal}\n")
+        print(f"\nBest gurobi solution found for first sample of jobs file {args.jobs_file}: {model.ObjVal}\n")
         return
 
     # do the deterministic counterpart separately because this is getting messy :')
