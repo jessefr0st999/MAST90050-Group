@@ -347,13 +347,9 @@ class Schedule():
                     # axis.annotate(f'({job_info["priority"]}/10)',
                     #     (job_info['arrival'], room_index + 1 - 0.4),
                     #     color=PLOT_COLOURS[job_info['family']])
-
-                if job_info['emergency']:
                     label = f'j{job_index} ({job_info["priority"]})'
                 else:
-                    # orig_index = job_info['orig_index']
                     label = f'j{job_index}' 
-
 
                 axis.annotate(label, (start, room_index + 1 + 0.2),
                     color=PLOT_COLOURS[job_info['family']])
