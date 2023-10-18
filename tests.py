@@ -36,6 +36,8 @@ def main():
     parser.add_argument('--alt_heur_id', type=int, default=1)
     parser.add_argument('--det_counterpart', action='store_true', default=False)
     parser.add_argument('--gurobi', action='store_true', default=False)
+    parser.add_argument('--gurobi_minutes', type=int, default=60)
+
 
     args = parser.parse_args()
 
@@ -53,7 +55,7 @@ def main():
             n_electives, elective_dfs, emerg_dfs = pickle.load(f)
             elective_df = elective_dfs[0]
 
-        model = exact_solve(jobs_df=elective_df, n_electives=n_electives, n_rooms=args.rooms, obj_weights=args.obj_weights)
+        model = exact_solve(jobs_df=elective_df, n_electives=n_electives, n_rooms=args.rooms, obj_weights=args.obj_weights, hard_time=60*args.gurobi_minutes)
         print(f"\nBest gurobi solution found for first sample of jobs file {args.job_file}: {model.ObjVal}\n")
         return
 
