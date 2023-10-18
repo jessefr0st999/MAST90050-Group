@@ -107,14 +107,201 @@ def heuristic_optimise(schedule: Schedule, n_parallel=3, log=False):
         ls.local_search()
         if log:
             print(f'Third LS: {schedule.eval_schedule()}')
-        # sa.sa(t_start=5, t_min=1)
-        # sa.sa(t_start=5, t_min=1)
-        # if log:
-        #     print(f'Fourth SA: {schedule.eval_schedule()}')
-        # ls.local_search()
-        # if log:
-        #     print(f'Fourth LS: {schedule.eval_schedule()}')
-        #     print()
+
+        print(f'Iteration {i + 1} seconds elapsed: {(datetime.now() - start).seconds}')
+
+        obj = schedule.eval_schedule()
+        if best_obj is None or obj < best_obj:
+            best_obj = obj
+            best_schedule, best_delays = schedule.get_schedule()
+
+        schedule.set_schedule(initial_schedule, initial_delays) 
+
+    print(f'Total seconds elapsed: {(datetime.now() - start_total).seconds}')
+    schedule.set_schedule(best_schedule, best_delays)
+
+
+def heuristic_optimise_alt1(schedule: Schedule, n_parallel=3, log=False):
+    '''
+    Alternative heuristic optimise. One SA and one LS
+    '''
+    initial_schedule, initial_delays = schedule.get_schedule()
+
+    best_obj = None
+    best_schedule, best_delays = None, None
+
+    sa = SimulatedAnnealing(schedule)
+    ls = LocalSearch(schedule)
+
+    start_total = datetime.now()
+    for i in range(n_parallel):
+        start = datetime.now()
+        if log:
+            print(f'Iteration {i + 1}')
+            print(f'Initial: {schedule.eval_schedule()}')
+
+        sa.sa(t_start=800, t_min=1)
+        if log:
+            print(f'First SA: {schedule.eval_schedule()}')
+        ls.local_search()
+        if log:
+            print(f'First LS: {schedule.eval_schedule()}')
+
+        print(f'Iteration {i + 1} seconds elapsed: {(datetime.now() - start).seconds}')
+
+        obj = schedule.eval_schedule()
+        if best_obj is None or obj < best_obj:
+            best_obj = obj
+            best_schedule, best_delays = schedule.get_schedule()
+
+        schedule.set_schedule(initial_schedule, initial_delays) 
+
+    print(f'Total seconds elapsed: {(datetime.now() - start_total).seconds}')
+    schedule.set_schedule(best_schedule, best_delays)
+
+def heuristic_optimise_alt2(schedule: Schedule, n_parallel=3, log=False):
+    '''
+    Alternative heuristic optimise. High temp SA
+    '''
+    initial_schedule, initial_delays = schedule.get_schedule()
+
+    best_obj = None
+    best_schedule, best_delays = None, None
+
+    sa = SimulatedAnnealing(schedule)
+    ls = LocalSearch(schedule)
+
+    start_total = datetime.now()
+    for i in range(n_parallel):
+        start = datetime.now()
+        if log:
+            print(f'Iteration {i + 1}')
+            print(f'Initial: {schedule.eval_schedule()}')
+
+        sa.sa(t_start=800, t_min=400)
+        sa.sa(t_start=800, t_min=400)
+        if log:
+            print(f'First SA: {schedule.eval_schedule()}')
+        ls.local_search()
+        if log:
+            print(f'First LS: {schedule.eval_schedule()}')
+        sa.sa(t_start=800, t_min=200)
+        sa.sa(t_start=800, t_min=200)
+        if log:
+            print(f'Second SA: {schedule.eval_schedule()}')
+        ls.local_search()
+        if log:
+            print(f'Second LS: {schedule.eval_schedule()}')
+        sa.sa(t_start=800, t_min=1)
+        sa.sa(t_start=800, t_min=1)
+        if log:
+            print(f'Third SA: {schedule.eval_schedule()}')
+        ls.local_search()
+        if log:
+            print(f'Third LS: {schedule.eval_schedule()}')
+
+        print(f'Iteration {i + 1} seconds elapsed: {(datetime.now() - start).seconds}')
+
+        obj = schedule.eval_schedule()
+        if best_obj is None or obj < best_obj:
+            best_obj = obj
+            best_schedule, best_delays = schedule.get_schedule()
+
+        schedule.set_schedule(initial_schedule, initial_delays) 
+
+    print(f'Total seconds elapsed: {(datetime.now() - start_total).seconds}')
+    schedule.set_schedule(best_schedule, best_delays)
+
+def heuristic_optimise_alt3(schedule: Schedule, n_parallel=3, log=False):
+    '''
+    Alternative heuristic optimise. Low temp SA
+    '''
+    initial_schedule, initial_delays = schedule.get_schedule()
+
+    best_obj = None
+    best_schedule, best_delays = None, None
+
+    sa = SimulatedAnnealing(schedule)
+    ls = LocalSearch(schedule)
+
+    start_total = datetime.now()
+    for i in range(n_parallel):
+        start = datetime.now()
+        if log:
+            print(f'Iteration {i + 1}')
+            print(f'Initial: {schedule.eval_schedule()}')
+
+        sa.sa(t_start=50, t_min=1)
+        sa.sa(t_start=50, t_min=1)
+        if log:
+            print(f'First SA: {schedule.eval_schedule()}')
+        ls.local_search()
+        if log:
+            print(f'First LS: {schedule.eval_schedule()}')
+        sa.sa(t_start=20, t_min=1)
+        sa.sa(t_start=20, t_min=1)
+        if log:
+            print(f'Second SA: {schedule.eval_schedule()}')
+        ls.local_search()
+        if log:
+            print(f'Second LS: {schedule.eval_schedule()}')
+        sa.sa(t_start=5, t_min=1)
+        sa.sa(t_start=5, t_min=1)
+        if log:
+            print(f'Third SA: {schedule.eval_schedule()}')
+        ls.local_search()
+        if log:
+            print(f'Third LS: {schedule.eval_schedule()}')
+
+        print(f'Iteration {i + 1} seconds elapsed: {(datetime.now() - start).seconds}')
+
+        obj = schedule.eval_schedule()
+        if best_obj is None or obj < best_obj:
+            best_obj = obj
+            best_schedule, best_delays = schedule.get_schedule()
+
+        schedule.set_schedule(initial_schedule, initial_delays) 
+
+    print(f'Total seconds elapsed: {(datetime.now() - start_total).seconds}')
+    schedule.set_schedule(best_schedule, best_delays)
+
+def heuristic_optimise_alt4(schedule: Schedule, n_parallel=3, log=False):
+    '''
+    Alternative heuristic optimise. Only final LS
+    '''
+    initial_schedule, initial_delays = schedule.get_schedule()
+
+    best_obj = None
+    best_schedule, best_delays = None, None
+
+    sa = SimulatedAnnealing(schedule)
+    ls = LocalSearch(schedule)
+
+    start_total = datetime.now()
+    for i in range(n_parallel):
+        start = datetime.now()
+        if log:
+            print(f'Iteration {i + 1}')
+            print(f'Initial: {schedule.eval_schedule()}')
+
+        sa.sa(t_start=800, t_min=400)
+        sa.sa(t_start=800, t_min=400)
+        if log:
+            print(f'First SA: {schedule.eval_schedule()}')
+
+        sa.sa(t_start=20, t_min=1)
+        sa.sa(t_start=10, t_min=1)
+        if log:
+            print(f'Second SA: {schedule.eval_schedule()}')
+        sa.sa(t_start=5, t_min=1)
+        sa.sa(t_start=5, t_min=1)
+        sa.sa(t_start=5, t_min=1)
+        if log:
+            print(f'Third SA: {schedule.eval_schedule()}')
+        ls.local_search()
+        if log:
+            print(f'Final/only LS: {schedule.eval_schedule()}')
+
         print(f'Iteration {i + 1} seconds elapsed: {(datetime.now() - start).seconds}')
 
         obj = schedule.eval_schedule()

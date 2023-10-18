@@ -65,6 +65,11 @@ def list_to_df(job_list, sort=False):
         df = df.rename(columns={'index': 'orig_index'})
     return df
 
+def det_electives(families):
+    '''
+    Return sample mean length jobs given input families 
+    '''
+    return list_to_df([[family_expected_lengths[family], ROOM_OPEN_TIME, 0, family, False] for family in families])
 
 class DetElectivesDetEmergencies():
     def __init__(self, electives, emergencies):
@@ -87,9 +92,7 @@ class StochElectivesStochEmergencies():
         self.n_emerg = n_emerg
         self.n_emerg_lambda = n_emerg_lambda
         self.priority_sd = priority_sd
-        self.deterministic_electives = [
-            [family_expected_lengths[family], ROOM_OPEN_TIME, 0, family, False]
-                for family in elective_families]
+        self.deterministic_electives = det_electives(elective_families)
 
     def generate_samples(self, n_samples):
         elective_dfs = []
@@ -132,4 +135,4 @@ class StochElectivesStochEmergencies():
         '''
         Return the electives as jobs with expectation as duration
         '''
-        return list_to_df(self.deterministic_electives)
+        return self.deterministic_electives

@@ -8,8 +8,8 @@ import matplotlib.pyplot as plt
 from schedules import OracleSchedule, StartDayScheduleDetElectivesDetEmerg, \
     StartDayScheduleStochElectives
 from jobs import DetElectivesDetEmergencies, StochElectivesStochEmergencies, \
-    default_elective_jobs, default_emergency_jobs
-from heuristics import heuristic_optimise
+    default_elective_jobs, default_emergency_jobs, det_electives
+from heuristics import heuristic_optimise, heuristic_optimise_alt1, heuristic_optimise_alt2, heuristic_optimise_alt3, heuristic_optimise_alt4
 
 def main():
     parser = argparse.ArgumentParser()
@@ -30,16 +30,111 @@ def main():
     parser.add_argument('--read_results', action='store_true', default=False)
     parser.add_argument('--jobs_file', default='test_jobs')
     parser.add_argument('--read_jobs', action='store_true', default=False)
+    parser.add_argument('--alt_heur', action='store_true', default=False)
+    parser.add_argument('--alt_heur_id', type=int, default=1)
+    parser.add_argument('--det_counterpart', action='store_true', default=False)
+
     args = parser.parse_args()
 
     # This seeds the jobs but not the solutions
     if args.seed:
         np.random.seed(args.seed)
 
+    # Determine what heuristic scheme to use
+    selected_heuristic_optimise = heuristic_optimise
+    if args.alt_heur:
+        selected_heuristic_optimise = [heuristic_optimise, heuristic_optimise_alt1, heuristic_optimise_alt2, heuristic_optimise_alt3, heuristic_optimise_alt4][args.alt_heur_id]
+
+
+    # do the deterministic counterpart separately because this is getting messy :')
+    if args.det_counterpart:
+        # only run this with previously run stochastic, so jobs file exists
+        with open(f'jobs/{args.jobs_file}.pkl', 'rb') as f:
+                n_electives, elective_dfs, emerg_dfs = pickle.load(f)
+
+        families = list(elective_dfs[0].family)
+        elective_df = det_electives(families) 
+        det_schedule = StartDayScheduleDetElectivesDetEmerg(
+                n_electives=n_electives,
+                n_rooms=args.rooms,
+                electives_df=elective_df,
+                emerg_df=pd.DataFrame(),
+                obj_weights=args.obj_weights,
+                bim=args.bim,
+            )
+        stoch_schedule = StartDayScheduleStochElectives(
+            n_electives=n_electives,
+            n_rooms=args.rooms,
+            electives_dfs=elective_dfs,
+            emerg_dfs=emerg_dfs,
+            obj_weights=args.obj_weights,
+            bim=args.bim,
+        )
+
+        # optimise deterministic case
+        selected_heuristic_optimise(det_schedule, n_parallel=args.heur_it, log=args.heur_log)
+        start_obj_det, start_obj_detailed_det = det_schedule.eval_schedule(args.log, detailed=True)
+        start_result, start_delays = det_schedule.get_schedule()
+        print(f'deterministic electives, start of day:')
+        print(round(start_obj_det))
+        print(start_obj_detailed_det)
+
+        # set stochastic schedule to be result of deterministic 
+        stoch_schedule.set_schedule(start_result, start_delays)
+
+        start_obj, start_obj_detailed = stoch_schedule.eval_schedule(args.log, detailed=True)
+        start_result, start_delays = stoch_schedule.get_schedule()
+        print(f'stochastic electives, start of day, using deterministic counterpart schedule:')
+        print(round(start_obj))
+        print(start_obj_detailed)
+
+        jobs_dfs = [pd.concat([elective_dfs[i], emerg_dfs[i]], ignore_index=True)
+            for i in range(args.samples)]
+        output = {
+            'start_det': (start_obj, start_obj_detailed, start_result, start_delays),
+            'start': (start_obj, start_obj_detailed, start_result, start_delays),
+            'end': [],
+            'jobs': jobs_dfs,
+        }
+
+        stoch_schedule.produce_end_day_schedule()
+        (end_obj, end_obj_detailed), end_results = \
+            stoch_schedule.eval_end_day_schedule(args.log, True)
+        end_obj_detailed_av = [0 for _ in range(5)]
+        for details in end_obj_detailed:
+            for i in range(5):
+                end_obj_detailed_av[i] += details[i] / len(end_obj_detailed)
+        print(f'stochastic electives, end of day, deterministic counterpart start:')
+        print(round(sum(end_obj) / len(end_obj)))
+        print(end_obj_detailed_av)
+        for i, (end_result, end_delays) in enumerate(end_results):
+            output['end'].append((end_obj[i], end_obj_detailed[i], end_result, end_delays))
+            if args.log:
+                print(f'stochastic electives (sample {i + 1}), end of day:')
+                print(end_obj[i])
+                print(end_obj_detailed[i])
+                print(end_result)
+                print(end_delays)
+                print()
+                stoch_schedule.plot(end_result, end_delays, jobs_dfs[i])
+
+        with open(f'results/{args.results_file}.pkl', 'wb') as f:
+            pickle.dump(output, f)
+
+        return
+
     # First, generate the jobs and instance the schedule objects
     if args.det_el:
-        jobs = DetElectivesDetEmergencies(default_elective_jobs, default_emergency_jobs)
-        n_electives, elective_df, emerg_df = jobs.get_jobs()
+        if args.read_jobs:
+            with open(f'jobs/{args.jobs_file}.pkl', 'rb') as f:
+                n_electives, elective_dfs, emerg_dfs = pickle.load(f)
+            elective_df = elective_dfs[0]
+            emerg_df = emerg_dfs[0]
+
+        else:
+            jobs = DetElectivesDetEmergencies(default_elective_jobs, default_emergency_jobs)
+            n_electives, elective_df, emerg_df = jobs.get_jobs()
+
         jobs_df = pd.concat([elective_df, emerg_df], ignore_index=True)
         if args.oracle:
             schedule = OracleSchedule(
@@ -130,7 +225,7 @@ def main():
     
     # Otherwise, calculate the optimal start of day then end of day schedules
     if args.det_el:
-        heuristic_optimise(schedule, n_parallel=args.heur_it, log=args.heur_log)
+        selected_heuristic_optimise(schedule, n_parallel=args.heur_it, log=args.heur_log)
         start_obj, start_obj_detailed = schedule.eval_schedule(args.log, detailed=True)
         start_result, start_delays = schedule.get_schedule()
         print(f'deterministic electives, start of day:')
@@ -173,7 +268,7 @@ def main():
             print(delays)
             print()
 
-        heuristic_optimise(schedule, n_parallel=args.heur_it, log=args.heur_log)
+        selected_heuristic_optimise(schedule, n_parallel=args.heur_it, log=args.heur_log)
         # Log the optimal start of day schedule
         start_obj, start_obj_detailed = schedule.eval_schedule(args.log, detailed=True)
         start_result, start_delays = schedule.get_schedule()
