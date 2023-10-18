@@ -10,6 +10,8 @@ from schedules import OracleSchedule, StartDayScheduleDetElectivesDetEmerg, \
 from jobs import DetElectivesDetEmergencies, StochElectivesStochEmergencies, \
     default_elective_jobs, default_emergency_jobs, det_electives
 from heuristics import heuristic_optimise, heuristic_optimise_alt1, heuristic_optimise_alt2, heuristic_optimise_alt3, heuristic_optimise_alt4
+from gurobi import exact_solve
+
 
 def main():
     parser = argparse.ArgumentParser()
@@ -33,6 +35,7 @@ def main():
     parser.add_argument('--alt_heur', action='store_true', default=False)
     parser.add_argument('--alt_heur_id', type=int, default=1)
     parser.add_argument('--det_counterpart', action='store_true', default=False)
+    parser.add_argument('--gurobi', action='store_true', default=False)
 
     args = parser.parse_args()
 
@@ -45,6 +48,14 @@ def main():
     if args.alt_heur:
         selected_heuristic_optimise = [heuristic_optimise, heuristic_optimise_alt1, heuristic_optimise_alt2, heuristic_optimise_alt3, heuristic_optimise_alt4][args.alt_heur_id]
 
+    if args.gurobi:
+        with open(f'jobs/{args.jobs_file}.pkl', 'rb') as f:
+            n_electives, elective_dfs, emerg_dfs = pickle.load(f)
+            elective_df = elective_dfs[0]
+
+        model = exact_solve(jobs_df=elective_df, n_electives=n_electives, n_rooms=args.rooms, obj_weights=args.obj_weights)
+        print(f"\nBest gurobi solution found for first sample of jobs file {args.job_file}: {model.ObjVal}\n")
+        return
 
     # do the deterministic counterpart separately because this is getting messy :')
     if args.det_counterpart:
