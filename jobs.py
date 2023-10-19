@@ -11,6 +11,7 @@ ROOM_CLOSE_TIME = 17*60
 JOB_FAMILIES = ['Cardiothoracic', 'Orthopaedic', 'Plastic', 'Hepatobilary']
 EMERG_JOB_FAMILIES = ['Cardiothoracic', 'Orthopaedic']
 
+# estimates of representative job lengths 
 family_samples = {
     'Cardiothoracic': [80, 91, 107],
     'Orthopaedic': [151, 39, 150, 91, 112, 58, 40, 58],
@@ -18,6 +19,7 @@ family_samples = {
     'Hepatobilary': [213, 32, 244],
 }
 
+# fit exponential distributions 
 family_exp_locs = {f: expon.fit(family_samples[f])[0] for f in JOB_FAMILIES}
 family_exp_scales = {f: expon.fit(family_samples[f])[1] for f in JOB_FAMILIES}
 family_expected_lengths = {f: family_exp_locs[f] + family_exp_scales[f] for f in JOB_FAMILIES}
@@ -48,11 +50,6 @@ default_emergency_jobs = [
     [120, 9*60 + 50, 8, 'Cardiothoracic', True],
 ]
 
-# def min_to_time(total_min):
-#     hour = int(total_min // 60)
-#     minute = int(total_min % 60)
-#     minute_str = str(minute) if minute >= 10 else f'0{minute}'
-#     return f'{hour}:{minute_str}'
 
 def list_to_df(job_list, sort=False):
     '''
@@ -72,6 +69,9 @@ def det_electives(families):
     return list_to_df([[family_expected_lengths[family], ROOM_OPEN_TIME, 0, family, False] for family in families])
 
 class DetElectivesDetEmergencies():
+    '''
+    A class to hold information of deterministic electives
+    '''
     def __init__(self, electives, emergencies):
         self.electives = electives
         self.emergencies = emergencies
@@ -84,6 +84,9 @@ class DetElectivesDetEmergencies():
 
 
 class StochElectivesStochEmergencies():
+    '''
+    A class to generate and provide stochastic samples of jobs
+    '''
     def __init__(self, elective_families, n_emerg=None, n_emerg_lambda=5, priority_sd=2):
         self.elective_dfs = None
         self.emerg_dfs = None
