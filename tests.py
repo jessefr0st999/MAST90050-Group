@@ -208,13 +208,11 @@ def main():
         end_objectives = []
         end_obj_detailed_av = [0 for _ in range(5)]
         for i in range(args.samples):
-            if i % 2 == 0:
-                figure, axes = plt.subplots(2, 2, layout='compressed')
-                axes = iter(axes.T.flatten())
-            axis = next(axes)
+            figure, axis = plt.subplots(1)
             schedule.plot(start_result, start_delays, output['jobs'][i],
                 title=f'sample {i + 1} start', axis=axis)
             if args.oracle:
+                plt.show()
                 return
             end_obj, end_obj_detailed, end_result, end_delays = output['end'][i]
             end_objectives.append(end_obj)
@@ -222,7 +220,7 @@ def main():
                 end_obj_detailed_av[j] += end_obj_detailed[j] / args.samples
             print(f'sample {i + 1} end objective: {end_obj}')
             print(f'sample {i + 1} end objective details: {end_obj_detailed}')
-            axis = next(axes)
+            figure, axis = plt.subplots(1)
             schedule.plot(end_result, end_delays, output['jobs'][i],
                 title=f'sample {i + 1} end', axis=axis)
             if args.det_el:
