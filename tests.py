@@ -9,7 +9,8 @@ from schedules import OracleSchedule, StartDayScheduleDetElectivesDetEmerg, \
     StartDayScheduleStochElectives
 from jobs import DetElectivesDetEmergencies, StochElectivesStochEmergencies, \
     default_elective_jobs, default_emergency_jobs, det_electives
-from heuristics import heuristic_optimise, heuristic_optimise_alt1, heuristic_optimise_alt2, heuristic_optimise_alt3, heuristic_optimise_alt4
+from heuristics import heuristic_optimise, heuristic_optimise_alt1, heuristic_optimise_alt2, \
+    heuristic_optimise_alt3, heuristic_optimise_alt4
 
 def main():
     parser = argparse.ArgumentParser()
@@ -33,8 +34,10 @@ def main():
     parser.add_argument('--alt_heur', action='store_true', default=False)
     parser.add_argument('--alt_heur_id', type=int, default=1)
     parser.add_argument('--det_counterpart', action='store_true', default=False)
-
     args = parser.parse_args()
+
+    if not args.bim:
+        args.obj_weights[-1] = 0
 
     # This seeds the jobs but not the solutions
     if args.seed:
@@ -43,14 +46,20 @@ def main():
     # Determine what heuristic scheme to use
     selected_heuristic_optimise = heuristic_optimise
     if args.alt_heur:
-        selected_heuristic_optimise = [heuristic_optimise, heuristic_optimise_alt1, heuristic_optimise_alt2, heuristic_optimise_alt3, heuristic_optimise_alt4][args.alt_heur_id]
+        selected_heuristic_optimise = [
+            heuristic_optimise,
+            heuristic_optimise_alt1,
+            heuristic_optimise_alt2,
+            heuristic_optimise_alt3,
+            heuristic_optimise_alt4,
+        ][args.alt_heur_id]
 
 
     # do the deterministic counterpart separately because this is getting messy :')
     if args.det_counterpart:
         # only run this with previously run stochastic, so jobs file exists
         with open(f'jobs/{args.jobs_file}.pkl', 'rb') as f:
-                n_electives, elective_dfs, emerg_dfs = pickle.load(f)
+            n_electives, elective_dfs, emerg_dfs = pickle.load(f)
 
         families = list(elective_dfs[0].family)
         elective_df = det_electives(families) 
