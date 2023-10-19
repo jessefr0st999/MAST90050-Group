@@ -346,15 +346,15 @@ class Schedule():
                         color='gray', linewidth=2)
                 if job_info['emergency']:
                     axis.plot(job_info['arrival'], room_index + 1,
-                        color=PLOT_COLOURS[job_info['family']], marker='x', markersize=12)
-                    axis.annotate(f'j{job_index}',
-                        (job_info['arrival'], room_index + 1 - 0.35),
-                        color=PLOT_COLOURS[job_info['family']])
-                    label = f'j{job_index} ({job_info["priority"]})'
-                else:
-                    label = f'j{job_index}' 
 
-                axis.annotate(label, (start, room_index + 1 + 0.2),
+                        color='orange',
+                        marker='x', markersize=12)
+                    arrival_label = f'j{job_index} ({job_info["priority"]})'
+                    axis.annotate(arrival_label,
+                        (job_info['arrival'], room_index + 1 - 0.25),
+                        color='orange')
+                start_label = f'j{job_index}'
+                axis.annotate(start_label, (start, room_index + 1 + 0.1),
                     color=PLOT_COLOURS[job_info['family']])
                 prev_job_info = job_info
                 prev_job_index = job_index
