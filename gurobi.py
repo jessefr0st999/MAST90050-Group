@@ -9,8 +9,10 @@ BIG_M = 1e10
 ROOM_OPEN_TIME = 8*60
 ROOM_CLOSE_TIME = 17*60
 
-def exact_solve(jobs_df, n_electives, n_rooms, obj_weights=[1, 500, 1500, 3, 10], soft_time=1*60, hard_time=1*60, soft_gap=0.05):
-    
+def exact_solve(jobs_df, n_electives, n_rooms, obj_weights=[1, 500, 1500, 3, 10], soft_time=60*60, hard_time=2*60*60, soft_gap=0.05):
+    '''
+    Solve a deterministic scheduling problem with gurobi
+    '''
     # constants
     n_jobs = len(jobs_df)
 
@@ -30,34 +32,44 @@ def exact_solve(jobs_df, n_electives, n_rooms, obj_weights=[1, 500, 1500, 3, 10]
 
 
     # variables
+
+    # whether a job is first in a room
     first = model.addVars(R, J, name='first', vtype=GRB.BINARY)
+    # whether a pair of jobs are consecutive  
     adj = model.addVars(J, J, name='adj', vtype=GRB.BINARY)
 
+    # start times and completion times
     s = model.addVars(J, name='s', vtype=GRB.CONTINUOUS)
     c = model.addVars(J, name='c', vtype=GRB.CONTINUOUS)
 
+    # emergency wait variables
     emerg_wait = model.addVars(E, name='emerg_wait', vtype=GRB.CONTINUOUS)
     emerg_wait_ = model.addVars(E, name='emerg_wait_', vtype=GRB.CONTINUOUS)
 
     emerg_wait_exponent = model.addVars(E, name='emerg_wait_exponent', vtype=GRB.CONTINUOUS)
+    
+    # BIM variables
     b = model.addVars(J, name='b', vtype=GRB.CONTINUOUS)
     in_gap = model.addVars(J, name='in_gap', vtype=GRB.BINARY)
     wait = model.addVars(J, J, name='wait', vtype=GRB.CONTINUOUS)
     min_wait = model.addVars(J, name='min_wait', vtype=GRB.CONTINUOUS)
 
+    # job time relation variables
     finish_k_geq_start_j = model.addVars(J, J, name='finish_k_geq_start_j', vtype=GRB.BINARY)
     start_j_gt_start_k = model.addVars(J, J, name='start_j_gt_start_k', vtype=GRB.BINARY)
     start_j_geq_finish_k = model.addVars(J, J, name='start_j_geq_finish_k', vtype=GRB.BINARY)
 
+    # job sequence relationships
     before_first = model.addVars(J, J, name='before_first', vtype=GRB.BINARY)
     after_last = model.addVars(J, J, name='after_last', vtype=GRB.BINARY)
     between_adj = model.addVars(J, J, J, name='between_adj', vtype=GRB.BINARY)
 
+    # job properties
     job_first = model.addVars(J, name='job_first', vtype=GRB.BINARY)
     job_not_last = model.addVars(J, name='job_not_last', vtype=GRB.BINARY)
     job_last = model.addVars(J, name='job_last', vtype=GRB.BINARY)
 
-
+    # objective measures 
     max_run = model.addVar(vtype=GRB.CONTINUOUS, name="max_run")
     max_run_ = model.addVar(vtype=GRB.CONTINUOUS, name="max_run_")
     rooms_open = model.addVar(vtype=GRB.INTEGER, name="rooms_open")
@@ -105,8 +117,6 @@ def exact_solve(jobs_df, n_electives, n_rooms, obj_weights=[1, 500, 1500, 3, 10]
     model.addConstr(weighted_emerg_wait == sum(emerg_wait[e] for e in E))
 
 
-    # TODO: consider modifying this to start at max of arrival time and a new variable delay
-    #       Will help in stochastic case
     # job starts after arrival time
     model.addConstrs(s[j] >= jobs_df.iloc[j].arrival for j in J)
     # job ends after processing
@@ -151,7 +161,7 @@ def exact_solve(jobs_df, n_electives, n_rooms, obj_weights=[1, 500, 1500, 3, 10]
     model.addConstrs((job_not_last[j] == sum(adj[j,k] for k in J)) for j in J)
     model.addConstrs((job_last[j] == -1*job_not_last[j] + 1) for j in J)
 
-
+    # determine job sequence relationships
     model.addConstrs((before_first[j,k] == and_(job_first[k], start_j_gt_start_k[k,j])) for j in J for k in J)
     model.addConstrs((after_last[j,k] == and_(job_last[k], start_j_geq_finish_k[j,k])) for j in J for k in J)
     model.addConstrs((between_adj[j,k,l] == and_(adj[k,l], start_j_geq_finish_k[j,k], start_j_gt_start_k[l,j])) for j in J for k in J for l in J)

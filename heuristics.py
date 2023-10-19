@@ -9,6 +9,9 @@ class SimulatedAnnealing():
         self.schedule = schedule
 
     def sa(self, t_start=800, t_min=10, t_factor=0.9995):
+        '''
+        Perform simulated annealing 
+        '''
         best_obj = self.schedule.eval_schedule()
         best_schedule = self.schedule.get_schedule()
         t = t_start
@@ -19,11 +22,15 @@ class SimulatedAnnealing():
             while t > t_min:                
                 self.schedule.perturb_schedule()
                 new_obj = self.schedule.eval_alt_schedule()
+                
+                # if improved, take improvement
                 if new_obj < best_obj:
                     best_obj = new_obj
                     self.schedule.accept_alt_schedule()
                     best_schedule = self.schedule.get_schedule()
                     obj = new_obj
+                # if no improvement, take the change with some probability that is 
+                # a function of the solution regression and the temperature
                 elif new_obj < obj or np.random.uniform() < np.exp((obj - new_obj)/t):
                     self.schedule.accept_alt_schedule()
                     obj = new_obj
@@ -36,10 +43,17 @@ class SimulatedAnnealing():
 
 
 class LocalSearch():
+    '''
+    A class for performing local search on a schedule
+    '''
     def __init__(self, schedule: Schedule) -> None:
         self.schedule = schedule
 
     def local_search(self):
+        '''
+        Perform local search, picking the option which improves the objective the most
+        at each iteration 
+        '''
         improvement = True
         best_obj = self.schedule.eval_schedule()
         while improvement:
@@ -47,6 +61,7 @@ class LocalSearch():
             best_option = None
             best_new_obj = 0
 
+            # determine best option
             options = self.schedule.perturb_options()
             for option in options:
                 self.schedule.perturb_schedule(option)
@@ -55,6 +70,7 @@ class LocalSearch():
                     best_option = option
                     best_new_obj = obj
             
+            # if no improvement found, we are in a local min
             if best_option is None:
                 break
 
@@ -265,51 +281,3 @@ def heuristic_optimise_alt3(schedule: Schedule, n_parallel=3, log=False):
     print(f'Total seconds elapsed: {(datetime.now() - start_total).seconds}')
     schedule.set_schedule(best_schedule, best_delays)
 
-def heuristic_optimise_alt4(schedule: Schedule, n_parallel=3, log=False):
-    '''
-    Alternative heuristic optimise. Only final LS
-    '''
-    initial_schedule, initial_delays = schedule.get_schedule()
-
-    best_obj = None
-    best_schedule, best_delays = None, None
-
-    sa = SimulatedAnnealing(schedule)
-    ls = LocalSearch(schedule)
-
-    start_total = datetime.now()
-    for i in range(n_parallel):
-        start = datetime.now()
-        if log:
-            print(f'Iteration {i + 1}')
-            print(f'Initial: {schedule.eval_schedule()}')
-
-        sa.sa(t_start=800, t_min=400)
-        sa.sa(t_start=800, t_min=400)
-        if log:
-            print(f'First SA: {schedule.eval_schedule()}')
-
-        sa.sa(t_start=20, t_min=1)
-        sa.sa(t_start=10, t_min=1)
-        if log:
-            print(f'Second SA: {schedule.eval_schedule()}')
-        sa.sa(t_start=5, t_min=1)
-        sa.sa(t_start=5, t_min=1)
-        sa.sa(t_start=5, t_min=1)
-        if log:
-            print(f'Third SA: {schedule.eval_schedule()}')
-        ls.local_search()
-        if log:
-            print(f'Final/only LS: {schedule.eval_schedule()}')
-
-        print(f'Iteration {i + 1} seconds elapsed: {(datetime.now() - start).seconds}')
-
-        obj = schedule.eval_schedule()
-        if best_obj is None or obj < best_obj:
-            best_obj = obj
-            best_schedule, best_delays = schedule.get_schedule()
-
-        schedule.set_schedule(initial_schedule, initial_delays) 
-
-    print(f'Total seconds elapsed: {(datetime.now() - start_total).seconds}')
-    schedule.set_schedule(best_schedule, best_delays)

@@ -110,6 +110,9 @@ class Schedule():
             self.alt_delays = new_delays
 
     def eval_alt_schedule(self, log=False, detailed=False):
+        '''
+        Evaluate the schedule stored as the alternative schedule
+        '''
         schedule, delays = self.schedule, self.delays
         self.schedule = self.alt_schedule
         self.delays = self.alt_delays
@@ -253,18 +256,11 @@ class Schedule():
                     in_gap = True
                     break
             break_in = min([gap_start for gap_start, _ in gaps if gap_start > start] + [earliest_finish])
-            # if log:
-            #     print(round(start), in_gap, round(break_in))
             if in_gap:
                 continue
             if break_in - start > bim:
                 bim = break_in - start
         if log:
-            # print('bim gaps:')
-            # for gap_start, gap_end in gaps:
-            #     print(round(gap_start), round(gap_end))
-            # print('job_starts:')
-            # print([round(t) for t in job_starts])
             print('alpha:', alpha, max_run, alpha * max_run)
             print('beta:', beta, rooms_open, beta * rooms_open)
             print('gamma:', gamma, weighted_emergency_wait, gamma * weighted_emergency_wait)
@@ -281,6 +277,10 @@ class Schedule():
             delta*tardiness + epsilon*bim + 0.00001*sum(self.delays)
 
     def _initial_schedule(self, jobs_df, n_rooms, n_electives):
+        '''
+        Perform inital scheduling, before optimisation, by placing jobs of the 
+        same family in the same room
+        '''
         initial_schedule = [[] for _ in range(n_rooms)]
         families = list(set(jobs_df['family']))
         
@@ -292,6 +292,9 @@ class Schedule():
         return initial_schedule, initial_delays
     
     def get_job_start_times(self, schedule, delays, jobs_df):
+        '''
+        Obtain start times of jobs given a schedule and job data, for use in plotting 
+        '''
         job_start_times = {}
         for room_jobs in schedule:
             prev_job_info = None
@@ -314,6 +317,9 @@ class Schedule():
         return job_start_times
     
     def plot(self, schedule, delays, jobs_df, title=None, axis=None):
+        '''
+        Create a visual representation of a shedule 
+        '''
         job_start_times = self.get_job_start_times(schedule, delays, jobs_df)
         show = False
         if axis is None:
@@ -340,6 +346,7 @@ class Schedule():
                         color='gray', linewidth=2)
                 if job_info['emergency']:
                     axis.plot(job_info['arrival'], room_index + 1,
+
                         color='orange',
                         marker='x', markersize=12)
                     arrival_label = f'j{job_index} ({job_info["priority"]})'
@@ -365,6 +372,9 @@ class Schedule():
             plt.show()
 
 class OracleSchedule(Schedule):
+    '''
+    A class for deterministic oracle schedules, where emergencies are always known
+    '''
     def __init__(self, schedule=[[]], delays=[], clean_t_same=20, clean_t_diff=90,
             n_rooms=5, electives_df=pd.DataFrame(), emerg_df=pd.DataFrame(),
             n_electives=0, obj_weights=[1,1,1,1,0]):
@@ -384,6 +394,10 @@ class OracleSchedule(Schedule):
     
 
 class StartDaySchedule(Schedule):
+    '''
+    An abstract class for a non-oracle scheduler, where emergencies will be unknown 
+    at the time of start day scheduling 
+    '''
     def __init__(self, schedule=[[]], delays=[], clean_t_same=20, clean_t_diff=90,
             n_rooms=5, bim=False, obj_weights=[1,1,1,1,0]):
         self.bim = bim
@@ -412,6 +426,9 @@ class StartDaySchedule(Schedule):
         return super().perturb_options() + bim_options
 
     def produce_end_day_schedule(self):
+        '''
+        Abstract function to "simulate" the day's arrival of emergencies 
+        '''
         raise NotImplementedError
 
     def _insert_emerg(self, jobs_df: pd.DataFrame, emerg, emerg_index, room_sequence: list):
@@ -487,6 +504,9 @@ class StartDaySchedule(Schedule):
 
 
 class StartDayScheduleDetElectivesDetEmerg(StartDaySchedule):
+    '''
+    A class for deterministic start day scheduling 
+    '''
     def __init__(self, schedule=[[]], delays=[], clean_t_same=20, clean_t_diff=90,
             n_rooms=5, bim=False, electives_df=pd.DataFrame(), emerg_df=pd.DataFrame(),
             n_electives=0, obj_weights=[1,1,1,1,0]):
@@ -503,9 +523,15 @@ class StartDayScheduleDetElectivesDetEmerg(StartDaySchedule):
             clean_t_diff, n_rooms, bim, obj_weights)
     
     def eval_schedule(self, log=False, detailed=False):
+        '''
+        Evaluate the current schedule 
+        '''
         return self._eval_single_schedule(self.jobs_df, log, detailed)
     
     def eval_end_day_schedule(self, log=False, detailed=False):
+        '''
+        Evaluate the end of day schedule after its creation
+        '''
         if self.end_day_schedule is None or self.end_day_delays is None:
             raise Exception('No end of day schedule has been determined')
         
@@ -522,6 +548,9 @@ class StartDayScheduleDetElectivesDetEmerg(StartDaySchedule):
         return evaluation
 
     def produce_end_day_schedule(self):
+        '''
+        Produce an end of day schedule based on the emergencies to come 
+        '''
         schedule, delays = self._produce_single_end_day_schedule(
             self.electives_df, self.emerg_df)
         self.end_day_schedule = schedule
@@ -529,6 +558,9 @@ class StartDayScheduleDetElectivesDetEmerg(StartDaySchedule):
 
 
 class StartDayScheduleStochElectives(StartDaySchedule):
+    '''
+    A class for stochastic start day scheduling 
+    '''
     def __init__(self, schedule=[[]], delays=[], clean_t_same=20, clean_t_diff=90, n_rooms=5,
             bim=False, electives_dfs=[pd.DataFrame()], emerg_dfs=[pd.DataFrame()],
             n_electives=0, obj_weights=[1,1,1,1,0]):
@@ -550,23 +582,26 @@ class StartDayScheduleStochElectives(StartDaySchedule):
             n_rooms, bim, obj_weights)
     
     def eval_schedule(self, log=False, detailed=False):
+        '''
+        Evaluate the stochastic start of day schedule 
+        '''
         obj = 0
         detailed_obj = [0 for _ in range(5)]
-        # if log:
-        #     print('Logging one evaluation only')
         for elective_df, emerg_df in zip(self.electives_dfs, self.emerg_dfs):
             output = self._eval_single_schedule(
                 pd.concat([elective_df, emerg_df], ignore_index=True), log, True)
             obj += output[0]
             for i in range(5):
                 detailed_obj[i] += output[1][i]
-            # log = False
         if detailed:
             return obj / len(self.electives_dfs), \
                 [x / len(self.electives_dfs) for x in detailed_obj]
         return obj / len(self.electives_dfs)
 
     def produce_end_day_schedule(self):
+        '''
+        For each sample, produce the end of day schedule, leveraging the deterministic class
+        '''
         schedule_objects = []
         for i in range(self.n_samples):
             single_instance = StartDayScheduleDetElectivesDetEmerg(
