@@ -318,7 +318,11 @@ class Schedule():
     
     def plot(self, schedule, delays, jobs_df, title=None, axis=None):
         '''
-        Create a visual representation of a shedule 
+        Create a visual representation of a schedule, plotting each job's operation
+        in its designated room. Emergency jobs are drawn using solid lines and
+        elective jobs with dotted lines, colour-coding each job by its family.
+        Emergency jobs arrival are also designated with an orange X. Finally, changeover
+        times between jobs are marked with thin grey lines.
         '''
         job_start_times = self.get_job_start_times(schedule, delays, jobs_df)
         show = False
